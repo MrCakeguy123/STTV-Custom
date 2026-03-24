@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STTV Custom - SmartTwitchTV with Ad-Blocking</title>
+    <meta name="description" content="A custom build of SmartTwitchTV with re-enabled ad-blocking, proxy auto-fallback, debug overlay, and more.">
+    <meta name="theme-color" content="#00e6e6">
+    <link rel="icon" href="images/favicon.png" type="image/png">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --cyan: #00e6e6;
+            --cyan-dark: #00b3b3;
+            --cyan-glow: rgba(0, 230, 230, 0.15);
+            --purple: #9147ff;
+            --bg: #0e0e10;
+            --bg-card: #18181b;
+            --bg-elevated: #1f1f23;
+            --text: #efeff1;
+            --text-dim: #adadb8;
+            --text-muted: #848494;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        a { color: var(--cyan); text-decoration: none; }
+        a:hover { color: #33ffff; text-decoration: underline; }
+
+        /* Nav */
+        nav {
+            position: fixed; top: 0; width: 100%; z-index: 100;
+            background: rgba(14, 14, 16, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0, 230, 230, 0.12);
+            padding: 0 2rem;
+        }
+        .nav-inner {
+            max-width: 1000px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between; height: 60px;
+        }
+        .nav-logo {
+            display: flex; align-items: center; gap: 0.6rem;
+            text-decoration: none; color: var(--text); font-weight: 700; font-size: 1.05rem;
+        }
+        .nav-logo img { width: 32px; height: 32px; border-radius: 8px; }
+        .nav-logo .custom-tag {
+            color: var(--cyan); font-size: 0.75rem; font-weight: 700;
+            border: 1px solid var(--cyan); border-radius: 4px; padding: 0.1rem 0.4rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .nav-links { display: flex; gap: 1.5rem; list-style: none; }
+        .nav-links a {
+            color: var(--text-dim); text-decoration: none; font-size: 0.85rem; font-weight: 500;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--cyan); }
+
+        /* Hero */
+        .hero {
+            min-height: 90vh; display: flex; align-items: center; justify-content: center;
+            text-align: center; padding: 6rem 2rem 4rem;
+            background: radial-gradient(ellipse at 50% 0%, var(--cyan-glow) 0%, transparent 55%), var(--bg);
+        }
+        .hero-content { max-width: 720px; }
+        .hero h1 {
+            font-size: clamp(2.2rem, 5vw, 3.2rem); font-weight: 800;
+            line-height: 1.15; margin-bottom: 1rem;
+        }
+        .hero h1 .cyan { color: var(--cyan); }
+        .hero .subtitle {
+            font-size: 1.1rem; color: var(--text-dim); margin-bottom: 0.75rem;
+        }
+        .hero .version {
+            display: inline-block; font-size: 0.8rem; font-weight: 600;
+            background: rgba(0, 230, 230, 0.1); border: 1px solid rgba(0, 230, 230, 0.25);
+            color: var(--cyan); padding: 0.25rem 0.8rem; border-radius: 100px;
+            margin-bottom: 2rem;
+        }
+        .hero p {
+            font-size: 1.05rem; color: var(--text-dim); max-width: 580px; margin: 0 auto 2rem;
+        }
+        .hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 0.95rem;
+            font-weight: 600; text-decoration: none; transition: all 0.2s; border: none;
+        }
+        .btn-cyan { background: var(--cyan); color: #000; }
+        .btn-cyan:hover { background: #33ffff; color: #000; text-decoration: none; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0, 230, 230, 0.25); }
+        .btn-outline {
+            background: transparent; color: var(--text); border: 1px solid rgba(255,255,255,0.15);
+        }
+        .btn-outline:hover { border-color: var(--cyan); color: var(--cyan); text-decoration: none; transform: translateY(-1px); }
+        .btn svg { width: 18px; height: 18px; }
+
+        /* Section layout */
+        .section { padding: 4.5rem 2rem; max-width: 900px; margin: 0 auto; }
+        .section-dark { padding: 4.5rem 2rem; background: var(--bg-card); }
+        .section-dark .inner { max-width: 900px; margin: 0 auto; }
+
+        h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem; }
+        h2 .cyan { color: var(--cyan); }
+        .section-desc { color: var(--text-dim); font-size: 1rem; margin-bottom: 2.5rem; }
+
+        /* Changes list */
+        .changes { display: flex; flex-direction: column; gap: 1.25rem; }
+        .change {
+            background: var(--bg-elevated); border: 1px solid rgba(255,255,255,0.05);
+            border-left: 3px solid var(--cyan); border-radius: 0 10px 10px 0;
+            padding: 1.25rem 1.5rem;
+        }
+        .change h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.3rem; }
+        .change p { color: var(--text-dim); font-size: 0.9rem; }
+        .change .tag {
+            display: inline-block; font-size: 0.7rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            padding: 0.15rem 0.5rem; border-radius: 3px; margin-bottom: 0.4rem;
+        }
+        .tag-adblock { background: rgba(0, 230, 230, 0.12); color: var(--cyan); }
+        .tag-feature { background: rgba(145, 71, 255, 0.12); color: var(--purple); }
+        .tag-privacy { background: rgba(76, 175, 80, 0.12); color: #4caf50; }
+
+        /* Download */
+        .dl-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; }
+        .dl-card {
+            background: var(--bg-elevated); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px; padding: 1.5rem; text-align: center;
+            text-decoration: none; color: var(--text); transition: all 0.2s;
+        }
+        .dl-card:hover { border-color: var(--cyan); transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0, 230, 230, 0.12); color: var(--text); text-decoration: none; }
+        .dl-card h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.2rem; }
+        .dl-card p { color: var(--text-muted); font-size: 0.82rem; }
+        .dl-card .dl-icon { margin-bottom: 0.5rem; }
+
+        .dl-note {
+            margin-top: 1.5rem; padding: 1rem 1.25rem;
+            background: var(--bg-elevated); border-left: 3px solid var(--cyan);
+            border-radius: 0 8px 8px 0; font-size: 0.85rem; color: var(--text-dim);
+        }
+        .dl-note strong { color: var(--text); }
+
+        /* Credits */
+        .credits-box {
+            background: var(--bg-elevated); border: 1px solid rgba(145, 71, 255, 0.2);
+            border-radius: 12px; padding: 2rem; max-width: 700px;
+        }
+        .credits-box h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.75rem; }
+        .credits-box p { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .credits-box ul { list-style: none; margin-top: 1rem; display: flex; flex-direction: column; gap: 0.4rem; }
+        .credits-box li { font-size: 0.9rem; }
+        .credits-box li a { text-decoration: none; }
+        .credits-box li a:hover { text-decoration: underline; }
+
+        /* Footer */
+        footer {
+            padding: 2.5rem 2rem; text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        footer p { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 0.35rem; }
+        .footer-links { display: flex; gap: 1.5rem; justify-content: center; margin-bottom: 0.75rem; flex-wrap: wrap; }
+        .footer-links a { font-size: 0.8rem; }
+
+        @media (max-width: 640px) {
+            .nav-links { display: none; }
+            .hero { padding: 5rem 1.5rem 3rem; }
+            .dl-cards { grid-template-columns: 1fr; max-width: 300px; margin: 0 auto; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="nav-inner">
+        <a href="#" class="nav-logo">
+            <img src="images/icon_512.png" alt="STTV Custom">
+            STTV <span class="custom-tag">Custom</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="#changes">What's Changed</a></li>
+            <li><a href="#download">Download</a></li>
+            <li><a href="#credits">Credits</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="hero-content">
+        <h1>STTV <span class="cyan">Custom</span></h1>
+        <div class="subtitle">A custom build of SmartTwitchTV</div>
+        <div class="version">v2026.03.20</div>
+        <p>This is a modded version of SmartTwitchTV with re-enabled ad-blocking, automatic proxy failover, a live debug overlay, and Firebase/Crashlytics removed for privacy.</p>
+        <div class="hero-buttons">
+            <a href="#download" class="btn btn-cyan">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>
+                Download
+            </a>
+            <a href="https://github.com/fgl27/SmartTwitchTV" class="btn btn-outline" target="_blank" rel="noopener">
+                Original Project
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- What's Changed -->
+<section class="section" id="changes">
+    <h2>What's <span class="cyan">Changed</span></h2>
+    <p class="section-desc">Everything in this build that's different from the original SmartTwitchTV by fgl27.</p>
+
+    <div class="changes">
+        <div class="change">
+            <div class="tag tag-adblock">Ad-Block</div>
+            <h3>Re-enabled proxy-based ad-blocking</h3>
+            <p>The original project had proxy/ad-blocking code commented out. This build re-enables it with TTV LOL Pro as the default proxy, using the updated endpoint (<code>lb-eu.cdn-perfprod.com</code>).</p>
+        </div>
+
+        <div class="change">
+            <div class="tag tag-adblock">Ad-Block</div>
+            <h3>Proxy auto-fallback chain</h3>
+            <p>When a proxy fails 3 times in a row, the app automatically rotates to the next one. The chain cycles through <strong>TTV LOL Pro</strong>, <strong>K-Twitch</strong>, and <strong>T1080</strong> so you don't have to manually switch when one goes down.</p>
+        </div>
+
+        <div class="change">
+            <div class="tag tag-feature">Feature</div>
+            <h3>Ad-block debug overlay</h3>
+            <p>A toggleable on-screen overlay that shows real-time stats: proxy status, proxy ping, requests proxied vs. direct, ad-block success rate, player bitrate/buffer/dropped frames/latency, and a fallback event log. Enabled by default in Settings &gt; Custom.</p>
+        </div>
+
+        <div class="change">
+            <div class="tag tag-feature">Feature</div>
+            <h3>Quick proxy switcher in player controls</h3>
+            <p>The proxy control that was commented out in the player's bottom bar has been restored. Switch between proxies or disable them without leaving the player.</p>
+        </div>
+
+        <div class="change">
+            <div class="tag tag-feature">Feature</div>
+            <h3>Custom settings section</h3>
+            <p>A new "Custom" section in Settings for mod-specific options: ad-block debug overlay toggle and proxy auto-fallback toggle.</p>
+        </div>
+
+        <div class="change">
+            <div class="tag tag-privacy">Privacy</div>
+            <h3>Firebase &amp; Crashlytics removed</h3>
+            <p>All Firebase, Google Analytics, and Crashlytics code has been disabled. No crash reports, no analytics, no data sent to Google. Error logging stays local.</p>
+        </div>
+
+        <div class="change">
+            <div class="tag tag-feature">Feature</div>
+            <h3>Custom branding &amp; version system</h3>
+            <p>The About screen and version display show "STTV Custom" branding with a separate version tag, making it easy to tell this build apart from the original. Changelog includes a dedicated entry for this fork's changes.</p>
+        </div>
+
+        <div class="change">
+            <div class="tag tag-feature">Feature</div>
+            <h3>Loads from local assets</h3>
+            <p>The APK loads the web app from bundled local assets instead of downloading from GitHub Pages. This means faster startup and no dependence on an external server for the UI.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Download -->
+<section class="section-dark" id="download">
+    <div class="inner">
+        <h2>Download</h2>
+        <p class="section-desc">Grab the APK or clone the source to build it yourself.</p>
+
+        <div class="dl-cards">
+            <a href="https://github.com/MrCakeguy123/SmartTwitchTV-fork/releases" class="dl-card" target="_blank" rel="noopener">
+                <div class="dl-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="var(--cyan)"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>
+                </div>
+                <h3>Download APK</h3>
+                <p>Latest release build</p>
+            </a>
+            <a href="https://github.com/MrCakeguy123/SmartTwitchTV-fork" class="dl-card" target="_blank" rel="noopener">
+                <div class="dl-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="var(--text)"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+                </div>
+                <h3>Source Code</h3>
+                <p>Build it yourself</p>
+            </a>
+        </div>
+
+        <div class="dl-note">
+            <strong>Note:</strong> This custom build cannot be installed alongside the Google Play version of SmartTwitchTV — they use different signing keys. Uninstall the original first if switching.
+        </div>
+    </div>
+</section>
+
+<!-- Credits -->
+<section class="section" id="credits">
+    <h2>Credits</h2>
+    <p class="section-desc">This build is based on the work of the original SmartTwitchTV developers.</p>
+
+    <div class="credits-box">
+        <h3>Original Project</h3>
+        <p>SmartTwitchTV is created and actively maintained by <strong>fgl27</strong>. The core application — the web UI, the Android APK, the Twitch API integration, the player, chat, settings, and everything else — is their work. This fork only modifies a small portion of the codebase to re-enable ad-blocking features and add some extra tools.</p>
+        <p>The project was originally started by <strong>nikitakatchik</strong> and later forked by <strong>CazuzaCzz</strong> before fgl27 rebuilt it from scratch.</p>
+        <ul>
+            <li><a href="https://github.com/fgl27/SmartTwitchTV" target="_blank" rel="noopener">fgl27/SmartTwitchTV</a> — Main project (all the real work lives here)</li>
+            <li><a href="https://github.com/CazuzaCzz/SmartTwitchTV" target="_blank" rel="noopener">CazuzaCzz/SmartTwitchTV</a> — Earlier fork</li>
+            <li><a href="https://github.com/nikitakatchik/SmartTwitchTV" target="_blank" rel="noopener">nikitakatchik/SmartTwitchTV</a> — Original project</li>
+        </ul>
+        <p style="margin-top: 1rem;">Ad-blocking proxies used in this build:</p>
+        <ul>
+            <li><a href="https://github.com/younesaassila/ttv-lol-pro" target="_blank" rel="noopener">TTV LOL Pro</a> by younesaassila</li>
+            <li><a href="https://github.com/nickkilla/K-Twitch" target="_blank" rel="noopener">K-Twitch</a></li>
+            <li><a href="https://github.com/onTDB/T1080" target="_blank" rel="noopener">T1080</a> by onTDB</li>
+        </ul>
+    </div>
+</section>
+
+<footer>
+    <div class="footer-links">
+        <a href="https://github.com/MrCakeguy123/SmartTwitchTV-fork" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/fgl27/SmartTwitchTV" target="_blank" rel="noopener">Original Project</a>
+        <a href="https://github.com/fgl27/SmartTwitchTV/blob/master/LICENSE" target="_blank" rel="noopener">License (GPL-3.0)</a>
+    </div>
+    <p>STTV Custom by Logan. Not affiliated with Twitch Interactive, Inc.</p>
+    <p>Built on <a href="https://github.com/fgl27/SmartTwitchTV" target="_blank" rel="noopener">SmartTwitchTV</a> by fgl27.</p>
+</footer>
+
+</body>
+</html>
